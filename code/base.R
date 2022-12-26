@@ -1,3 +1,9 @@
+install.packages(c("data.table", "magrittr", "fst", "ggplot2", "ggpubr", "officer", "rvg", "tableone", "gtsummary", "MatchIt", "twang", "usethis", "gitcreds"))
+
+c(1,2) -> x
+
+
+
 ## Vector
 x <- c(1, 2, 3, 4, 5, 6)            ## vector of variable
 y <- c(7, 8, 9, 10, 11, 12)
@@ -79,7 +85,7 @@ y
 
 ## function
 x <- c(1:10, 12, 13, NA, NA, 15, 17)      ## 결측치가 포함되어 있다면..
-mean(x)                                           
+mean(x,na.rm=T)                                           
 mean0 <- function(x){
   mean(x, na.rm = T)
 }                                         ## mean함수의 na.rm 옵션을 TRUE로 바꿈. default는 F
@@ -109,6 +115,7 @@ out
 sapply(1:nrow(mat), function(x){mean(mat[x, ])})             ## Return vector
 lapply(1:nrow(mat), function(x){mean(mat[x, ])})             ## Return list type
 unlist(lapply(1:nrow(mat), function(x){mean(mat[x, ])}))     ## Same to sapply
+
 #parallel::mclapply(1:nrow(mat), function(x){mean(mat[x, ])}, mc.cores = 4)           ## Multicore
 
 apply(mat, 1, mean)                                          ## 1: 행
@@ -145,12 +152,19 @@ head(ex)
 library(readxl)                                            ## for xlsx
 ex.excel <- read_excel("example_g1e.xlsx", sheet = 1)      ## 1st sheet
 
+head(ex.excel)
+#엑셀의 특징 시트가 여러개일 수 있다 시트를 지정해야한다 ,이름을 치거나 넘버를 치거나 
+
+
 library(haven)                                             ## for SAS/SPSS/STATA   
 ex.sas <- read_sas("example_g1e.sas7bdat")                 ## SAS
 ex.spss <- read_sav("example_g1e.sav")                     ## SPSS
 head(ex.spss)
 
 write.csv(ex, "example_g1e_ex.csv", row.names = F)
+#row.names없이 하면 -> 행 넘버가 같이 저장이됨 index_col= False같은거임 
+
+
 #write_sas(ex.sas, "example_g1e_ex.sas7bdat")
 #write_sav(ex.spss, "example_g1e_ex.sav")
 
@@ -172,7 +186,8 @@ summary(ex)
 
 
 ## See variables
-ex$EXMD_BZ_YYYY                                            ## data.frame style
+ex$EXMD_BZ_YYYY                                             ## data.frame style
+# ex$c("EXMD_BZ_YYYY", "RN_INDI", "BMI") 이게 안된다 
 ex[, "EXMD_BZ_YYYY"]                                       ## matrix style
 ex[["EXMD_BZ_YYYY"]]                                       ## list style
 ex[, 1]                                                    ## matrix style with order
@@ -204,6 +219,7 @@ length(values)
 BMI_HGHT_and <- (ex$BMI >= 25 & ex$HGHT >= 175)              ## and
 BMI_HGHT_or <- (ex$BMI >= 25 | ex$HGHT >= 175)               ## or
 
+BMI_HGHT_and
 ex$zero <- 0                                              ## variable with 0
 ex$BMI_cat <- (ex$BMI >= 25)                              ## T/F
 ex$BMI_cat <- as.integer(ex$BMI >= 25)                    ## 0, 1
@@ -214,19 +230,31 @@ ex[, "BMI_cat"] <- (ex$BMI >= 25)                         ## matrix style
 ex[["BMI_cat"]] <- (ex$BMI >= 25)                         ## list style
 
 
+#범주형 변수로 돼잇는건 변수로 , 먼저 바꿔주고 클라스가 인티저 뉴메릭 캐릭터팩터가있는데
+# 팩터는 범주 factor는 말은 문자인데 컴퓨터 내부적인 숫자를 가진 범주형변수 
+
 
 ## Set class
 vars.cat <- c("RN_INDI", "Q_PHX_DX_STK", "Q_PHX_DX_HTDZ", "Q_PHX_DX_HTN", "Q_PHX_DX_DM", "Q_PHX_DX_DLD", "Q_PHX_DX_PTB", 
               "Q_HBV_AG", "Q_SMK_YN", "Q_DRK_FRQ_V09N")
+
+
 vars.cat <- names(ex)[c(2, 4:12)]                              ## same
+
+
 vars.cat <- c("RN_INDI", grep("Q_", names(ex), value = T))     ## same: extract variables starting with "Q_"
 
 vars.conti <- setdiff(names(ex), vars.cat)                     ## Exclude categorical variables
 vars.conti <- names(ex)[!(names(ex) %in% vars.cat)]            ## same: !- not, %in%- including
 
+vars.conti
+
 for (vn in vars.cat){                                          ## for loop: as.factor
   ex[, vn] <- as.factor(ex[, vn])
 }
+
+# lapply 쓸때는 새로운 벡터가 나와야하고 가지고 와야하는게 있는게 지금은 그럴게 아니고 갈아치우는거기때문에 
+# 처음의 아웃컴을 만들게 없고 기존것만 바꾸면 된다기 때문에뭐 걍 똑같아용
 
 for (vn in vars.conti){                                        ## for loop: as.numeric
   ex[, vn] <- as.numeric(ex[, vn])
@@ -235,8 +263,12 @@ for (vn in vars.conti){                                        ## for loop: as.n
 summary(ex)
 
 table(as.numeric(ex$Q_PHX_DX_STK))
+#팩터를 뉴메릭으로 바꾸는 경우 굉장히 큰실수이다 조심해야한다!!! 
+
+
 table(as.numeric(as.character(ex$Q_PHX_DX_STK)))
 
+#그래서 애즈캐릭터로 한번 한다음에 뉴메릭으로 바꿔줘야해 팩터 -> 뉴메릭 바로가는거 위험 
 
 ## Date
 addDate <- paste(ex$HME_YYYYMM, "01", sep = "")                ## add day- use `paste`
